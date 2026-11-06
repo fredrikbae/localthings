@@ -101,24 +101,77 @@ def test_oic_res_is_built_from_the_registry_and_cached():
     assert session.gets == []
 
 
-def test_a_silent_href_while_listing_is_skipped_next_time():
+@pytest.fixture
+def clock(monkeypatch):
+    now = [1000.0]
+    monkeypatch.setattr(mfl_transport, "_now", lambda: now[0])
+    return now
+
+
+def test_a_silent_href_while_listing_is_retried_once_its_backoff_ends(clock):
     transport, _ = _transport({"/oic/d": AC_DEVICE, "/alarms/vs/0": TimeoutError()})
     with pytest.raises(TimeoutError):
         transport.read(["oic", "res"], timeout=10.0)
 
-    transport, session = _transport({"/oic/d": AC_DEVICE})
-    transport.read(["oic", "res"], timeout=10.0)
+    # The reconnect lists past it while it backs off...
+    answers = {"/oic/d": AC_DEVICE, "/alarms/vs/0": (0x45, {"alarms": []})}
+    transport, session = _transport(answers)
+    _, links = transport.read(["oic", "res"], timeout=10.0)
     assert "/alarms/vs/0" not in {href for href, _ in session.gets}
+    assert "/alarms/vs/0" not in [link["href"] for link in links]
+
+    # ...and a later /oic/res read confirms it once the wait is over.
+    clock[0] += mfl_transport.BACKOFF_INITIAL_S
+    session.gets.clear()
+    _, links = transport.read(["oic", "res"], timeout=10.0)
+    assert session.gets == [("/alarms/vs/0", ())]
+    assert "/alarms/vs/0" in [link["href"] for link in links]
 
 
-def test_repeated_timeouts_withhold_an_href():
+def test_a_timeout_backs_off_progressively_and_is_always_retried(clock):
     transport, session = _transport({"/mode/vs/0": TimeoutError()})
-    for _ in range(mfl_transport.OVERSIZED_AFTER_TIMEOUTS):
+    expected = [60.0, 120.0, 240.0, 480.0, 960.0, 1920.0, 3600.0, 3600.0]
+    for delay in expected:
         with pytest.raises(TimeoutError):
             transport.read(["mode", "vs", "0"], timeout=1.0)
-    session.gets.clear()
-    assert transport.read(["mode", "vs", "0"], timeout=1.0) == (0x84, None)
-    assert session.gets == []
+        session.gets.clear()
+        # Inside the wait it is answered locally, without a GET...
+        clock[0] += delay - 1
+        assert transport.read(["mode", "vs", "0"], timeout=1.0) == (0x84, None)
+        assert session.gets == []
+        # ...and once the wait is over it goes to the board again.
+        clock[0] += 1
+    assert expected[-1] == mfl_transport.BACKOFF_MAX_S
+
+
+def test_an_answer_resets_the_backoff(clock):
+    answers: dict = {"/mode/vs/0": TimeoutError()}
+    transport, _ = _transport(answers)
+    with pytest.raises(TimeoutError):
+        transport.read(["mode", "vs", "0"], timeout=1.0)
+    clock[0] += mfl_transport.BACKOFF_INITIAL_S
+    answers["/mode/vs/0"] = (0x45, {"modes": []})
+    assert transport.read(["mode", "vs", "0"], timeout=1.0)[0] == 0x45
+
+    answers["/mode/vs/0"] = TimeoutError()
+    with pytest.raises(TimeoutError):
+        transport.read(["mode", "vs", "0"], timeout=1.0)
+    # Back to the first step, not the second.
+    clock[0] += mfl_transport.BACKOFF_INITIAL_S
+    answers["/mode/vs/0"] = (0x45, {"modes": []})
+    assert transport.read(["mode", "vs", "0"], timeout=1.0)[0] == 0x45
+
+
+def test_a_failed_retry_while_listing_keeps_the_known_links(clock):
+    answers: dict = {"/oic/d": AC_DEVICE, "/power/vs/0": (0x45, {}), "/alarms/vs/0": TimeoutError()}
+    transport, _ = _transport(answers)
+    with pytest.raises(TimeoutError):
+        transport.read(["oic", "res"], timeout=10.0)
+    _, first = transport.read(["oic", "res"], timeout=10.0)
+    assert [link["href"] for link in first] == ["/power/vs/0"]
+
+    clock[0] += mfl_transport.BACKOFF_INITIAL_S
+    assert transport.read(["oic", "res"], timeout=10.0) == (0x45, first)
 
 
 def test_queried_reads_pass_through():

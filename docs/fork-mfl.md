@@ -46,6 +46,12 @@ All new code is in `custom_components/localthings/mfl/`:
 
   Upstream code then runs in per-href (flat) mode, as it does for boards without
   a Collection.
+
+  An href whose read times out is answered locally with 4.04 for a while and
+  then tried again. The wait starts at 60 s, doubles on each consecutive
+  timeout up to 1 h, and resets on an answer, so nothing is given up for good.
+  The same applies while `/oic/res` is listed: an href skipped there is
+  confirmed on a later call once its wait is over.
 - `flow.py`: config-flow helpers.
 
 Upstream files get small entry points only:
