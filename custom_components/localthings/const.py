@@ -28,6 +28,10 @@ TRANSPORT_LEGACY_HTTP = "legacy_http"
 # each href /oic/res advertises is read on its own (registry/flat.py).
 CONF_READ_MODE = "read_mode"
 READ_MODE_PER_HREF = "per_href"
+# Fork (docs/fork-mfl.md): absent means pyOpenSSL; DTLS_ENGINE_MFL1024 is the
+# pure-Python engine offering max_fragment_length 1024 (mfl/).
+CONF_DTLS_ENGINE = "dtls_engine"
+DTLS_ENGINE_MFL1024 = "mfl1024"
 
 # The legacy 8888 bridge needs one credential the CoAP path does not: a
 # device token, which only the appliance can issue (see

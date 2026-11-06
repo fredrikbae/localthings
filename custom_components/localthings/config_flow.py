@@ -55,6 +55,7 @@ from .const import (
     CONF_DEVICE_TOKEN,
     CONF_DEVICE_TYPE,
     CONF_DISABLED_SUBDEVICES,
+    CONF_DTLS_ENGINE,
     CONF_FINISH_TIME_HYSTERESIS_MINUTES,
     CONF_HOST,
     CONF_LEAF_CERT_PEM,
@@ -76,6 +77,7 @@ from .const import (
     DEFAULT_FINISH_TIME_HYSTERESIS_MINUTES,
     DEFAULT_LEARN_MODES,
     DOMAIN,
+    DTLS_ENGINE_MFL1024,
     LEGACY_HTTP_PORT,
     PROBE_GET_TIMEOUT_S,
     PROBE_PORT_RANGE,
@@ -105,6 +107,7 @@ from .legacy_http_token import (
     CallbackPortUnavailable,
     obtain_device_token,
 )
+from .mfl import flow as mfl_flow
 from .registry.capabilities.laundry import cycle_options, personal_course_labels
 from .registry.subdevices import MAIN
 from .session import psk_provider
@@ -867,16 +870,21 @@ def _connect_and_read(
     local_port: int | None,
     *,
     auth: AuthenticationProvider | None = None,
+    mfl: bool = False,
 ) -> dict:
     transport = None
     try:
-        transport = (
-            DtlsTransport(host, port, auth=auth, local_port=local_port)
-            if auth is not None
-            else DtlsTransport(
-                host, port, cert_pem=cert_pem, key_pem=key_pem, local_port=local_port
+        if mfl:
+            assert cert_pem is not None and key_pem is not None
+            transport = mfl_flow.transport(host, port, cert_pem, key_pem, local_port)
+        else:
+            transport = (
+                DtlsTransport(host, port, auth=auth, local_port=local_port)
+                if auth is not None
+                else DtlsTransport(
+                    host, port, cert_pem=cert_pem, key_pem=key_pem, local_port=local_port
+                )
             )
-        )
         transport.connect()
         return _read_device(transport, host, port)
     finally:
@@ -893,6 +901,7 @@ def _handshake_and_read(
     local_port: int | None = None,
     *,
     psk: PskAuth | None = None,
+    mfl: bool = False,
 ) -> dict:
     """Handshake each candidate in turn, returning the first device that answers.
 
@@ -915,7 +924,9 @@ def _handshake_and_read(
         retried = False
         while True:
             try:
-                return _connect_and_read(host, port, cert_pem, key_pem, local_port, auth=psk)
+                return _connect_and_read(
+                    host, port, cert_pem, key_pem, local_port, auth=psk, mfl=mfl
+                )
             except CannotConnect as err:
                 # The device answered, just not with something we can use --
                 # trying the remaining ports can't improve on that.
@@ -931,7 +942,10 @@ def _handshake_and_read(
                 failures.append((port, exc))
                 _LOGGER.debug("port %d failed: %s", port, exc)
                 break
-    alerts = _diagnose_failures(host, scan, failures, cert_pem, key_pem, auth=psk)
+    diagnostic = (
+        mfl_flow.diagnostic_auth(cert_pem, key_pem) if mfl and cert_pem and key_pem else psk
+    )
+    alerts = _diagnose_failures(host, scan, failures, cert_pem, key_pem, auth=diagnostic)
     raise _stack_failure(
         host, scan, _classify_handshake_failure(host, scan, failures, alerts, psk=psk is not None)
     )
@@ -952,8 +966,14 @@ def _probe_and_validate(
     ca_key_pem: str = "",
     existing_leaf: tuple[str, str] | None = None,
     local_port: int | None = None,
+    prefer_mfl: bool = False,
 ) -> dict:
     """Find the device's port, authenticate to it, and resolve its identity.
+
+    Fork (docs/fork-mfl.md): a HandshakeTimeout is retried once with the
+    max_fragment_length engine, and `prefer_mfl` (an entry already on it)
+    goes straight there, since the plain handshake drops such a board off
+    Wi-Fi.
 
     Port detection runs first and needs no credentials, so an unreachable
     host fails here rather than after a round trip to Samsung's cloud.
@@ -994,8 +1014,25 @@ def _probe_and_validate(
     else:
         cert_pem, key_pem = _mint_preferred(ca_cert_pem, ca_key_pem)
 
+    engine: list[str | None] = [DTLS_ENGINE_MFL1024 if prefer_mfl else None]
+
+    def attempt(cert_pem: str, key_pem: str) -> dict:
+        if engine[0] == DTLS_ENGINE_MFL1024:
+            return _handshake_and_read(host, scan, cert_pem, key_pem, local_port, mfl=True)
+        try:
+            return _handshake_and_read(host, scan, cert_pem, key_pem, local_port)
+        except HandshakeTimeout:
+            _LOGGER.info(
+                "%s: handshake never completed; retrying with max_fragment_length in %.0fs",
+                host,
+                mfl_flow.RETRY_DELAY_S,
+            )
+            time.sleep(mfl_flow.RETRY_DELAY_S)
+            engine[0] = DTLS_ENGINE_MFL1024
+            return _handshake_and_read(host, scan, cert_pem, key_pem, local_port, mfl=True)
+
     try:
-        info = _handshake_and_read(host, scan, cert_pem, key_pem, local_port)
+        info = attempt(cert_pem, key_pem)
     except CertRejected:
         # The only failure a fresh certificate can fix, and only worth a
         # second pass when the certificate wasn't freshly minted already.
@@ -1003,9 +1040,9 @@ def _probe_and_validate(
             raise
         _LOGGER.debug("Reused leaf rejected by %s; re-minting and retrying", host)
         cert_pem, key_pem = _mint_preferred(ca_cert_pem, ca_key_pem)
-        info = _handshake_and_read(host, scan, cert_pem, key_pem, local_port)
+        info = attempt(cert_pem, key_pem)
 
-    return {**info, "leaf_cert_pem": cert_pem, "leaf_key_pem": key_pem}
+    return {**info, "leaf_cert_pem": cert_pem, "leaf_key_pem": key_pem, "dtls_engine": engine[0]}
 
 
 def _probe_psk(host: str, identity: str, key: str, local_port: int | None = None) -> dict:
@@ -1115,6 +1152,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_MANUFACTURER: info["manufacturer"],
                 CONF_DEVICE_TYPE: info["device_type_name"],
                 **({CONF_READ_MODE: info["read_mode"]} if info.get("read_mode") else {}),
+                **({CONF_DTLS_ENGINE: info["dtls_engine"]} if info.get("dtls_engine") else {}),
                 **(
                     {
                         CONF_TRANSPORT: TRANSPORT_LEGACY_HTTP,
@@ -1766,6 +1804,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         entry.data.get(CONF_CA_KEY_PEM, ""),
                         (leaf_cert, leaf_key) if leaf_cert and leaf_key else None,
                         self._setup_source_port(host),
+                        entry.data.get(CONF_DTLS_ENGINE) == DTLS_ENGINE_MFL1024,
                     )
             except (LegacyHttpFamily, AuthRejected):
                 # An 8888 appliance where a DTLS one was, or one that refuses
@@ -1823,8 +1862,16 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             **(
                                 {CONF_READ_MODE: info["read_mode"]} if info.get("read_mode") else {}
                             ),
+                            **(
+                                {CONF_DTLS_ENGINE: info["dtls_engine"]}
+                                if info.get("dtls_engine")
+                                else {}
+                            ),
                         },
-                        drop=() if info.get("read_mode") else (CONF_READ_MODE,),
+                        drop=(
+                            *(() if info.get("read_mode") else (CONF_READ_MODE,)),
+                            *(() if info.get("dtls_engine") else (CONF_DTLS_ENGINE,)),
+                        ),
                     )
 
         return self.async_show_form(

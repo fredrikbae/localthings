@@ -25,7 +25,7 @@ from uuid import UUID
 
 from smartthings_local.protocol import auth as protocol_auth
 
-from .const import AUTH_CERTIFICATE, CONF_HOST, CONF_PORT
+from .const import AUTH_CERTIFICATE, CONF_DTLS_ENGINE, CONF_HOST, CONF_PORT, DTLS_ENGINE_MFL1024
 from .credentials import (
     InvalidCredentialConfig,
     authentication_carrier,
@@ -70,6 +70,10 @@ def authentication_provider_from_entry(
     handshake that looks like a rejected credential.
     """
     if authentication_carrier(data) == AUTH_CERTIFICATE:
+        if data.get(CONF_DTLS_ENGINE) == DTLS_ENGINE_MFL1024:
+            from .mfl.provider import MflCertificateAuth
+
+            return MflCertificateAuth(*certificate_credentials(data))
         return certificate_provider(*certificate_credentials(data))
     return psk_provider(*psk_credentials(data))
 

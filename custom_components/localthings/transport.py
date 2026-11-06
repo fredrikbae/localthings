@@ -25,12 +25,14 @@ from smartthings_local.protocol.dtls_session import DtlsCoapSession
 
 from .const import (
     CONF_DEVICE_TOKEN,
+    CONF_DTLS_ENGINE,
     CONF_HOST,
     CONF_LEAF_CERT_PEM,
     CONF_LEAF_KEY_PEM,
     CONF_LEGACY_FAMILY,
     CONF_PORT,
     CONF_TRANSPORT,
+    DTLS_ENGINE_MFL1024,
     DTLS_LOCAL_PORT_BASE,
     TRANSPORT_LEGACY_HTTP,
 )
@@ -312,7 +314,12 @@ def create_transport(
             family=data.get(CONF_LEGACY_FAMILY),
         )
     host, port = entry_endpoint(data)
-    return DtlsTransport(
+    transport_class = DtlsTransport
+    if data.get(CONF_DTLS_ENGINE) == DTLS_ENGINE_MFL1024:
+        from .mfl.transport import MflDtlsTransport
+
+        transport_class = MflDtlsTransport
+    return transport_class(
         host,
         port,
         auth=authentication_provider_from_entry(data),
