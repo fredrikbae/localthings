@@ -94,9 +94,11 @@ When a rebase conflicts, it will be in one of the four entry points above.
 `tests/mfl/test_session_contract.py` failing after a smartthings-local upgrade
 means the private hook changed.
 
-Upstream's `tests/localthings/test_observe.py` is flaky under `-n auto` on
-v0.36.0 itself: 2 of 10 runs of the untouched tag ended with one teardown error
-from a lingering thread.
+The branch also carries one upstream fix unrelated to MFL. On v0.36.0 about one
+full-suite run in five ended with a lingering-thread teardown error, because
+`ObserveManager.close()` did not wait for its refresh thread. Commit
+`fix(observe): wait for the refresh thread on close` fixes it, with 0 errors in
+45 runs. Drop the commit at a rebase once upstream has its own fix.
 
 ## Not verified yet
 
