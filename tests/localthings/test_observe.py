@@ -8,6 +8,7 @@ import time
 import cbor2
 from smartthings_local.ocf.state_cache import StateCache
 
+from custom_components.localthings import observe as observe_module
 from custom_components.localthings.observe import (
     MODE_POLL,
     STALE_SWEEPS_TO_FALLBACK,
@@ -602,12 +603,15 @@ def test_log_sweep_discrepancies_ignores_href_during_settle_window(caplog):
     href = "/oven/vs/0"
     mgr.on_notification(href, cbor2.dumps({"a": 1}))
     mgr.try_enter_observe_mode(session, [href], grace_period_s=0.01)
-    mgr.mark_write_pending(href, settle_s=5.0)
+    try:
+        mgr.mark_write_pending(href, settle_s=5.0)
 
-    with caplog.at_level("DEBUG"):
-        mgr.log_sweep_discrepancies({href: {"a": 2}})
+        with caplog.at_level("DEBUG"):
+            mgr.log_sweep_discrepancies({href: {"a": 2}})
 
-    assert "observe missed a change" not in caplog.text
+        assert "observe missed a change" not in caplog.text
+    finally:
+        mgr.close()
 
 
 def test_downgrade_to_poll_moves_subscribed_to_fallback():
@@ -625,11 +629,14 @@ def test_downgrade_to_poll_moves_subscribed_to_fallback():
     mgr.try_enter_observe_mode(session, [href], grace_period_s=0.02)
     notifier.join()
 
-    mgr.downgrade_to_poll()
+    try:
+        mgr.downgrade_to_poll()
 
-    assert mgr.mode == "poll"
-    assert mgr.subscribed_hrefs == set()
-    assert mgr.fallback_hrefs == {href}
+        assert mgr.mode == "poll"
+        assert mgr.subscribed_hrefs == set()
+        assert mgr.fallback_hrefs == {href}
+    finally:
+        mgr.close()
 
 
 def test_start_refresh_task_spawns_a_daemon_thread():
@@ -659,6 +666,33 @@ def test_close_stops_the_refresh_thread():
 
     assert not thread.is_alive()
     assert mgr._refresh_thread is None
+
+
+def test_close_waits_for_a_refresh_thread_that_is_slow_to_exit(monkeypatch):
+    """close() returns only once the thread is gone: a stopped-but-running
+    thread outlived the coordinator's close and tripped HA's lingering-thread
+    check under load."""
+
+    class _SlowToExit:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def run_forever(self, stop):
+            stop.wait()
+            time.sleep(0.2)
+
+    monkeypatch.setattr(observe_module, "ObserveRefreshTask", _SlowToExit)
+    mgr = _manager()
+    mgr.subscribed_hrefs = {"/oven/vs/0"}
+    mgr.start_refresh_task(_FakeSession())
+    thread = mgr._refresh_thread
+    assert thread is not None
+
+    mgr.downgrade_to_poll()
+    assert thread.is_alive()  # downgrade stays non-blocking
+    mgr.close()
+
+    assert not thread.is_alive()
 
 
 def test_downgrade_to_poll_stops_refresh_task():

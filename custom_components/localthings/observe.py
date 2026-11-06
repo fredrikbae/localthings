@@ -26,6 +26,8 @@ from .registry.capabilities.common import merge_options_field
 _LOGGER = logging.getLogger(__name__)
 
 REFRESH_INTERVAL_S = 6 * 3600.0
+# How long close() waits for a refresh thread caught mid refresh_observes.
+REFRESH_JOIN_TIMEOUT_S = 10.0
 
 MODE_OBSERVE = "observe"
 MODE_POLL = "poll"
@@ -129,6 +131,9 @@ class ObserveManager:
         self._refresh_task: ObserveRefreshTask | None = None
         self._refresh_stop: threading.Event | None = None
         self._refresh_thread: threading.Thread | None = None
+        # Refresh threads told to stop but possibly still running; close()
+        # waits for them, since stopping alone does not mean they are gone.
+        self._stopped_threads: list[threading.Thread] = []
         # observe_resource's recordings, at most one per href. Guarded by
         # _notify_cond, like _attempting.
         self._taps: dict[str, Tap] = {}
@@ -530,11 +535,21 @@ class ObserveManager:
         self._refresh_thread.start()
 
     def _stop_refresh_task(self) -> None:
+        """Non-blocking: callers include the event loop, and a thread inside
+        refresh_observes can take a network round trip to notice."""
         if self._refresh_stop is not None:
             self._refresh_stop.set()
+        if self._refresh_thread is not None:
+            self._stopped_threads = [t for t in self._stopped_threads if t.is_alive()]
+            self._stopped_threads.append(self._refresh_thread)
         self._refresh_thread = None
         self._refresh_task = None
         self._refresh_stop = None
 
     def close(self) -> None:
+        """Stop refreshing and wait for every refresh thread to exit.
+        Blocking -- the coordinator runs it in an executor."""
         self._stop_refresh_task()
+        for thread in self._stopped_threads:
+            thread.join(timeout=REFRESH_JOIN_TIMEOUT_S)
+        self._stopped_threads = [t for t in self._stopped_threads if t.is_alive()]

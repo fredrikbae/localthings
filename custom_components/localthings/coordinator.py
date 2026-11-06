@@ -1302,7 +1302,8 @@ class LocalThingsCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._subpoll_task is not None:
             self._subpoll_task.cancel()
             self._subpoll_task = None
-        self._observe.close()
+        # Blocking: waits for the refresh thread to exit.
+        await self.hass.async_add_executor_job(self._observe.close)
         await self.hass.async_add_executor_job(self._close_session)
 
     def _on_cache_changed(self, changed: bool, source: str) -> None:
