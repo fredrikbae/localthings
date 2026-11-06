@@ -52,6 +52,14 @@ All new code is in `custom_components/localthings/mfl/`:
   timeout up to 1 h, and resets on an answer, so nothing is given up for good.
   The same applies while `/oic/res` is listed: an href skipped there is
   confirmed on a later call once its wait is over.
+
+  A timeout while listing also replaces the session, because nothing is
+  answered on it afterwards. The listing then goes on with the next href.
+  Without this, one oversized resource left the device with no resources and
+  setup failed with `unexpected_response`. That happened on the
+  `DA_WM_A51_20_COMMON` washer, whose `/course/vs/0` is over the limit.
+  Replacing the session is safe there because `/oic/res` is only read right
+  after connect, before anything is observed.
 - `flow.py`: config-flow helpers.
 
 Upstream files get small entry points only:

@@ -47,10 +47,31 @@ class _FakeSession:
     def pace(self):
         return None
 
+    def close(self):
+        self.closes += 1
 
-def _transport(answers) -> tuple[MflDtlsTransport, _FakeSession]:
-    transport = MflDtlsTransport(HOST, PORT, auth=cast(Any, object()))
+    connects = 0
+    closes = 0
+
+
+class _FakeTransport(MflDtlsTransport):
+    """Reconnects to the same fake session, counted in its `connects`, so
+    `gets` spans every session; `refuse_reconnect` makes the board refuse."""
+
+    fake: _FakeSession
+    refuse_reconnect = False
+
+    def connect(self) -> None:
+        if self.refuse_reconnect:
+            raise ConnectionError("handshake refused")
+        self.fake.connects += 1
+        self._session = cast(Any, self.fake)
+
+
+def _transport(answers) -> tuple[_FakeTransport, _FakeSession]:
+    transport = _FakeTransport(HOST, PORT, auth=cast(Any, object()))
     session = _FakeSession(answers)
+    transport.fake = session
     transport._session = cast(Any, session)
     return transport, session
 
@@ -108,21 +129,43 @@ def clock(monkeypatch):
     return now
 
 
-def test_a_silent_href_while_listing_is_retried_once_its_backoff_ends(clock):
-    transport, _ = _transport({"/oic/d": AC_DEVICE, "/alarms/vs/0": TimeoutError()})
-    with pytest.raises(TimeoutError):
-        transport.read(["oic", "res"], timeout=10.0)
+WASHER_DEVICE = (0x45, {"rt": ["oic.wk.d", "oic.d.washer"], "di": "x"})
 
-    # The reconnect lists past it while it backs off...
-    answers = {"/oic/d": AC_DEVICE, "/alarms/vs/0": (0x45, {"alarms": []})}
+
+def test_a_silent_href_while_listing_does_not_end_the_listing(clock):
+    """The washer's /course/vs/0 is over the limit: it times out and kills
+    the session. The listing reconnects and confirms what comes after it."""
+    answers: dict = {
+        "/oic/d": WASHER_DEVICE,
+        "/alarms/vs/0": (0x45, {"alarms": []}),
+        "/course/vs/0": TimeoutError(),
+        "/cycleinterface/vs/0": (0x45, {}),
+    }
+    transport, session = _transport(answers)
+
+    code, links = transport.read(["oic", "res"], timeout=10.0)
+
+    assert code == 0x45
+    assert [link["href"] for link in links] == ["/alarms/vs/0", "/cycleinterface/vs/0"]
+    assert (session.closes, session.connects) == (1, 1)
+    requested = [href for href, _ in session.gets]
+    assert requested.index("/course/vs/0") < requested.index("/cycleinterface/vs/0")
+
+
+def test_a_silent_href_while_listing_is_retried_once_its_backoff_ends(clock):
+    answers: dict = {"/oic/d": AC_DEVICE, "/alarms/vs/0": TimeoutError()}
     transport, session = _transport(answers)
     _, links = transport.read(["oic", "res"], timeout=10.0)
-    assert "/alarms/vs/0" not in {href for href, _ in session.gets}
     assert "/alarms/vs/0" not in [link["href"] for link in links]
 
-    # ...and a later /oic/res read confirms it once the wait is over.
-    clock[0] += mfl_transport.BACKOFF_INITIAL_S
+    # Inside the wait, a later /oic/res read leaves it alone...
     session.gets.clear()
+    transport.read(["oic", "res"], timeout=10.0)
+    assert session.gets == []
+
+    # ...and once the wait is over it confirms it.
+    answers["/alarms/vs/0"] = (0x45, {"alarms": []})
+    clock[0] += mfl_transport.BACKOFF_INITIAL_S
     _, links = transport.read(["oic", "res"], timeout=10.0)
     assert session.gets == [("/alarms/vs/0", ())]
     assert "/alarms/vs/0" in [link["href"] for link in links]
@@ -164,14 +207,24 @@ def test_an_answer_resets_the_backoff(clock):
 
 def test_a_failed_retry_while_listing_keeps_the_known_links(clock):
     answers: dict = {"/oic/d": AC_DEVICE, "/power/vs/0": (0x45, {}), "/alarms/vs/0": TimeoutError()}
-    transport, _ = _transport(answers)
-    with pytest.raises(TimeoutError):
-        transport.read(["oic", "res"], timeout=10.0)
+    transport, session = _transport(answers)
     _, first = transport.read(["oic", "res"], timeout=10.0)
     assert [link["href"] for link in first] == ["/power/vs/0"]
 
+    # Times out again, and this time the board does not take the reconnect.
     clock[0] += mfl_transport.BACKOFF_INITIAL_S
+    transport.refuse_reconnect = True
     assert transport.read(["oic", "res"], timeout=10.0) == (0x45, first)
+    assert session.closes == 2
+
+
+def test_a_failed_reconnect_on_the_first_listing_propagates(clock):
+    transport, _ = _transport({"/oic/d": AC_DEVICE, "/alarms/vs/0": TimeoutError()})
+    transport.refuse_reconnect = True
+    with pytest.raises(ConnectionError):
+        transport.read(["oic", "res"], timeout=10.0)
+    # Nothing half-listed is kept: the next start lists from scratch.
+    assert (HOST, PORT) not in mfl_transport._links
 
 
 def test_queried_reads_pass_through():

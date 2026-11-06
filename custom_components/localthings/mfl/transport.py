@@ -111,8 +111,8 @@ class MflDtlsTransport(DtlsTransport):
     def _oic_res(self, timeout: float) -> list[dict[str, Any]]:
         """A link list built from the registry's hrefs for this device type,
         each confirmed by its own small GET, in /oic/res's bare shape.
-        Listed once per start; hrefs that were backing off are tried again
-        on a later call once their wait is over."""
+        Listed once per start; hrefs that were backing off or timed out are
+        tried again on a later call once their wait is over."""
         endpoint = (self.host, self.port)
         with _lock:
             cached = _links.get(endpoint)
@@ -120,10 +120,10 @@ class MflDtlsTransport(DtlsTransport):
         if cached is not None:
             try:
                 confirmed, still_pending = self._confirm(pending)
-            except TimeoutError:
-                # Already backing off again and logged by _get; the list as
-                # known is still right, and the dead session is reconnected
-                # on the caller's next request.
+            except Exception:
+                # Only a failed reconnect gets here. The list as known is
+                # still right, and the caller's next request finds no
+                # session and reconnects.
                 return [dict(link) for link in cached]
             with _lock:
                 cached = _links[endpoint] = cached + confirmed
@@ -164,8 +164,16 @@ class MflDtlsTransport(DtlsTransport):
 
     def _confirm(self, hrefs: Sequence[str]) -> tuple[list[dict[str, Any]], set[str]]:
         """GET each href; returns the links that answered 2.05 and the hrefs
-        skipped because they are backing off. A timeout ends the session on
-        these boards, so it propagates and the caller's reconnect resumes."""
+        skipped, because they are backing off or timed out just now.
+
+        A timeout ends the session on these boards: a reply over the limit
+        is never sent and nothing else is answered after it (measured on the
+        DA_WM_A51_20_COMMON washer's /course/vs/0, 2026-11-06). The session
+        is replaced and the listing goes on, so one such href cannot leave
+        the device with no resources at all. That is safe here because
+        /oic/res is only read right after connect, before anything is
+        observed (coordinator._open_session, config_flow._read_device). A
+        failed reconnect propagates."""
         links: list[dict[str, Any]] = []
         skipped: set[str] = set()
         for href in hrefs:
@@ -173,7 +181,13 @@ class MflDtlsTransport(DtlsTransport):
                 skipped.add(href)
                 continue
             self.pace()
-            code, _ = self._get(href, ENUMERATION_GET_TIMEOUT_S)
+            try:
+                code, _ = self._get(href, ENUMERATION_GET_TIMEOUT_S)
+            except TimeoutError:
+                skipped.add(href)
+                self.close()
+                self.connect()
+                continue
             if code == CONTENT:
                 links.append({"href": href, "rt": [], "if": []})
         return links, skipped
