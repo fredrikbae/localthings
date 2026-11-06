@@ -87,8 +87,16 @@ ruff check custom_components tests
 ty check --python <venv>/bin/python custom_components tests
 pytest tests/ -q -n auto
 git push --force-with-lease fork claude/mfl-engine
-git tag vX.Y.Z-mfl.N && git push fork vX.Y.Z-mfl.N
+# manifest.json "version": "X.Y.Z.N+mfl", then a GitHub release (not a pre-release)
+gh release create vX.Y.Z.N+mfl --target claude/mfl-engine
 ```
+
+Versions are upstream's `X.Y.Z` plus a fork counter `N`, and the PEP 440 local
+part `+mfl`: `0.36.0.1+mfl`, `0.36.0.2+mfl`, and after a rebase onto 0.37.0,
+`0.37.0.1+mfl`. Other forms fail in Home Assistant itself. For example,
+`0.36.0.1-mfl` matches none of the strategies HA's loader accepts, so the
+integration is blocked. `0.36.0-mfl.1` sorts below the upstream 0.36.0 it is
+built on. HACS lists only GitHub releases not marked as pre-releases.
 
 When a rebase conflicts, it will be in one of the four entry points above.
 `tests/mfl/test_session_contract.py` failing after a smartthings-local upgrade
