@@ -5,6 +5,14 @@ adds one thing to upstream [mbillow/localthings](https://github.com/mbillow/loca
 a DTLS engine that offers the `max_fragment_length` extension (RFC 6066 §4),
 for boards that drop off Wi-Fi when the handshake starts.
 
+## How this was made
+
+Claude (Anthropic's AI assistant, in Claude Code) wrote the code, the tests
+and this document, and ran the measurements against the appliances. The fork's
+owner (fredrikbae) owns the hardware, decided the scope and the design choices,
+reviewed the work and is accountable for it. Commits carry only the owner's
+identity, as `CONTRIBUTING.md` requires.
+
 ## Why
 
 On the TP1X `DA-AC-THERAC-01011` board (Thermia Aura S3,
@@ -56,10 +64,11 @@ All new code is in `custom_components/localthings/mfl/`:
   A timeout while listing also replaces the session, because nothing is
   answered on it afterwards. The listing then goes on with the next href.
   Without this, one oversized resource left the device with no resources and
-  setup failed with `unexpected_response`. That happened on the
-  `DA_WM_A51_20_COMMON` washer, whose `/course/vs/0` is over the limit.
-  Replacing the session is safe there because `/oic/res` is only read right
-  after connect, before anything is observed.
+  setup failed with `unexpected_response`. That happened when the timeout
+  fallback put a `DA_WM_A51_20_COMMON` washer on the engine: its
+  `/course/vs/0` is over the limit. Replacing the session is safe there
+  because `/oic/res` is only read right after connect, before anything is
+  observed.
 - `flow.py`: config-flow helpers.
 
 Upstream files get small entry points only:
@@ -128,8 +137,32 @@ full-suite run in five ended with a lingering-thread teardown error, because
 `fix(observe): wait for the refresh thread on close` fixes it, with 0 errors in
 45 runs. Drop the commit at a rebase once upstream has its own fix.
 
+## In service
+
+Five appliances on one installation, 2026-11-06:
+
+| Appliance | Board | Engine |
+|---|---|---|
+| Thermia Aura S3, two units | `TP1X_DA-AC-THERAC-01011_0000`, TizenRT 4.0 | MFL 1024, read per href |
+| Fridge | `ARTIK051_DONGLE_REF`, TizenRT 2.0 | upstream |
+| Washer, dryer | `DA_WM_A51_20_COMMON` | upstream |
+
+On the two heat pumps under MFL:
+
+- **Writes** work. `PUT /temperatures/vs/0` answered 2.04, and the read-back matched.
+- **Observe** accepted 14 subscriptions on the unit checked.
+- **Sessions** have held for hours across restarts. The listing found 56 of the
+  128 registry hrefs for this type, with none left waiting to retry.
+
+The washer and dryer run the upstream path. On the washer, the plain handshake
+timed out once during setup, and the timeout fallback put that attempt on the
+engine. A later setup completed the plain handshake. The appliances leave Wi-Fi
+when they power down after a while idle, which can explain the timeout.
+
 ## Not verified yet
 
-- writes and Observe notifications under MFL
-- sessions longer than a few seconds
+- whether Observe notifications under MFL arrive reliably over time
 - which Mbed TLS version TizenRT 4.0 actually ships
+- the timeout fallback stores the engine on the entry. A board that timed out
+  for another reason, such as powering down, then reads per href for good,
+  and loses any resource over the limit.
