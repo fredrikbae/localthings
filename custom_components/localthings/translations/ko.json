@@ -2225,20 +2225,24 @@
         "title": "삼성 가전제품 추가",
         "description": "삼성 가전제품의 IP 주소를 입력하세요. LocalThings가 자체 서명 인증서로 자동으로 설정하며, 대부분의 가전제품은 그 외에 아무것도 필요하지 않습니다.",
         "data": {
-          "host": "IP 주소"
+          "host": "IP 주소",
+          "use_max_fragment_length": "max_fragment_length 사용"
         },
         "data_description": {
-          "host": "삼성 가전제품의 로컬 IP 주소입니다(예: 192.168.1.50)."
+          "host": "삼성 가전제품의 로컬 IP 주소입니다(예: 192.168.1.50).",
+          "use_max_fragment_length": "LocalThings가 연결할 때 Wi-Fi 연결이 끊기는 기기용입니다. 각 DTLS 레코드를 1024바이트로 제한하며, 기기를 리소스 하나씩 읽습니다."
         }
       },
       "user_reuse": {
         "title": "삼성 가전제품 추가",
         "description": "삼성 가전제품의 IP 주소를 입력하세요. 기존 LocalThings 가전제품의 CA 인증 정보를 다시 사용합니다.",
         "data": {
-          "host": "IP 주소"
+          "host": "IP 주소",
+          "use_max_fragment_length": "max_fragment_length 사용"
         },
         "data_description": {
-          "host": "삼성 가전제품의 로컬 IP 주소입니다(예: 192.168.1.50)."
+          "host": "삼성 가전제품의 로컬 IP 주소입니다(예: 192.168.1.50).",
+          "use_max_fragment_length": "LocalThings가 연결할 때 Wi-Fi 연결이 끊기는 기기용입니다. 각 DTLS 레코드를 1024바이트로 제한하며, 기기를 리소스 하나씩 읽습니다."
         }
       },
       "credential": {
@@ -2306,10 +2310,12 @@
         "title": "가전제품 주소 변경",
         "description": "가전제품의 현재 IP 주소를 입력하세요. 이 기기의 나머지 설정은 그대로 유지되며 엔티티, 기록, 자동화도 보존됩니다.",
         "data": {
-          "host": "IP 주소"
+          "host": "IP 주소",
+          "use_max_fragment_length": "max_fragment_length 사용"
         },
         "data_description": {
-          "host": "삼성 가전제품의 로컬 IP 주소입니다(예: 192.168.1.50)."
+          "host": "삼성 가전제품의 로컬 IP 주소입니다(예: 192.168.1.50).",
+          "use_max_fragment_length": "LocalThings가 연결할 때 Wi-Fi 연결이 끊기는 기기용입니다. 각 DTLS 레코드를 1024바이트로 제한하며, 기기를 리소스 하나씩 읽습니다."
         }
       },
       "confirm_unknown_type": {

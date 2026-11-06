@@ -2225,20 +2225,24 @@
         "title": "Samsung-apparaat toevoegen",
         "description": "Voer het IP-adres van je Samsung-apparaat in. LocalThings stelt het automatisch in met een zelfondertekend certificaat; de meeste apparaten hebben verder niets nodig.",
         "data": {
-          "host": "IP-adres"
+          "host": "IP-adres",
+          "use_max_fragment_length": "max_fragment_length gebruiken"
         },
         "data_description": {
-          "host": "Het lokale IP-adres van je Samsung-apparaat (bijvoorbeeld 192.168.1.50)."
+          "host": "Het lokale IP-adres van je Samsung-apparaat (bijvoorbeeld 192.168.1.50).",
+          "use_max_fragment_length": "Voor apparaten die van de wifi vallen als LocalThings verbinding maakt. Beperkt elk DTLS-record tot 1024 bytes; het apparaat wordt dan resource voor resource gelezen."
         }
       },
       "user_reuse": {
         "title": "Samsung-apparaat toevoegen",
         "description": "Voer het IP-adres van je Samsung-apparaat in. De CA-inloggegevens van een bestaand LocalThings-apparaat worden hergebruikt.",
         "data": {
-          "host": "IP-adres"
+          "host": "IP-adres",
+          "use_max_fragment_length": "max_fragment_length gebruiken"
         },
         "data_description": {
-          "host": "Het lokale IP-adres van je Samsung-apparaat (bijvoorbeeld 192.168.1.50)."
+          "host": "Het lokale IP-adres van je Samsung-apparaat (bijvoorbeeld 192.168.1.50).",
+          "use_max_fragment_length": "Voor apparaten die van de wifi vallen als LocalThings verbinding maakt. Beperkt elk DTLS-record tot 1024 bytes; het apparaat wordt dan resource voor resource gelezen."
         }
       },
       "credential": {
@@ -2306,10 +2310,12 @@
         "title": "Apparaatadres wijzigen",
         "description": "Voer het huidige IP-adres van het apparaat in. De rest blijft ongewijzigd — de entiteiten, geschiedenis en automatiseringen blijven behouden.",
         "data": {
-          "host": "IP-adres"
+          "host": "IP-adres",
+          "use_max_fragment_length": "max_fragment_length gebruiken"
         },
         "data_description": {
-          "host": "Het lokale IP-adres van je Samsung-apparaat (bijvoorbeeld 192.168.1.50)."
+          "host": "Het lokale IP-adres van je Samsung-apparaat (bijvoorbeeld 192.168.1.50).",
+          "use_max_fragment_length": "Voor apparaten die van de wifi vallen als LocalThings verbinding maakt. Beperkt elk DTLS-record tot 1024 bytes; het apparaat wordt dan resource voor resource gelezen."
         }
       },
       "confirm_unknown_type": {

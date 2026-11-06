@@ -2225,20 +2225,24 @@
         "title": "Add Samsung appliance",
         "description": "Enter the IP address of your Samsung appliance. LocalThings sets it up automatically with a self-signed certificate — most appliances need nothing else.",
         "data": {
-          "host": "IP address"
+          "host": "IP address",
+          "use_max_fragment_length": "Use max_fragment_length"
         },
         "data_description": {
-          "host": "Local IP address of your Samsung appliance (e.g. 192.168.1.50)."
+          "host": "Local IP address of your Samsung appliance (e.g. 192.168.1.50).",
+          "use_max_fragment_length": "For appliances that drop off Wi-Fi when LocalThings connects. Limits each DTLS record to 1024 bytes; the appliance is then read one resource at a time."
         }
       },
       "user_reuse": {
         "title": "Add Samsung appliance",
         "description": "Enter the IP address of your Samsung appliance. The CA credentials from an existing LocalThings appliance will be reused.",
         "data": {
-          "host": "IP address"
+          "host": "IP address",
+          "use_max_fragment_length": "Use max_fragment_length"
         },
         "data_description": {
-          "host": "Local IP address of your Samsung appliance (e.g. 192.168.1.50)."
+          "host": "Local IP address of your Samsung appliance (e.g. 192.168.1.50).",
+          "use_max_fragment_length": "For appliances that drop off Wi-Fi when LocalThings connects. Limits each DTLS record to 1024 bytes; the appliance is then read one resource at a time."
         }
       },
       "credential": {
@@ -2306,10 +2310,12 @@
         "title": "Change appliance address",
         "description": "Enter the appliance's current IP address. Everything else about this device stays as it is — its entities, history and automations are kept.",
         "data": {
-          "host": "IP address"
+          "host": "IP address",
+          "use_max_fragment_length": "Use max_fragment_length"
         },
         "data_description": {
-          "host": "Local IP address of your Samsung appliance (e.g. 192.168.1.50)."
+          "host": "Local IP address of your Samsung appliance (e.g. 192.168.1.50).",
+          "use_max_fragment_length": "For appliances that drop off Wi-Fi when LocalThings connects. Limits each DTLS record to 1024 bytes; the appliance is then read one resource at a time."
         }
       },
       "confirm_unknown_type": {

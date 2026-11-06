@@ -2225,20 +2225,24 @@
         "title": "Adicionar aparelho Samsung",
         "description": "Insira o endereço IP do seu aparelho Samsung. O LocalThings faz a configuração automaticamente com um certificado autoassinado — a maioria dos aparelhos não precisa de mais nada.",
         "data": {
-          "host": "Endereço IP"
+          "host": "Endereço IP",
+          "use_max_fragment_length": "Usar max_fragment_length"
         },
         "data_description": {
-          "host": "Endereço IP local do seu aparelho Samsung (por exemplo, 192.168.1.50)."
+          "host": "Endereço IP local do seu aparelho Samsung (por exemplo, 192.168.1.50).",
+          "use_max_fragment_length": "Para aparelhos que perdem o Wi-Fi quando o LocalThings se conecta. Limita cada registro DTLS a 1024 bytes; o aparelho passa a ser lido um recurso por vez."
         }
       },
       "user_reuse": {
         "title": "Adicionar aparelho Samsung",
         "description": "Insira o endereço IP do seu aparelho Samsung. As credenciais da autoridade certificadora de um aparelho já configurado no LocalThings serão reutilizadas.",
         "data": {
-          "host": "Endereço IP"
+          "host": "Endereço IP",
+          "use_max_fragment_length": "Usar max_fragment_length"
         },
         "data_description": {
-          "host": "Endereço IP local do seu aparelho Samsung (por exemplo, 192.168.1.50)."
+          "host": "Endereço IP local do seu aparelho Samsung (por exemplo, 192.168.1.50).",
+          "use_max_fragment_length": "Para aparelhos que perdem o Wi-Fi quando o LocalThings se conecta. Limita cada registro DTLS a 1024 bytes; o aparelho passa a ser lido um recurso por vez."
         }
       },
       "credential": {
@@ -2306,10 +2310,12 @@
         "title": "Alterar endereço do aparelho",
         "description": "Insira o endereço IP atual do aparelho. Todo o restante permanece como está — as entidades, o histórico e as automações são preservados.",
         "data": {
-          "host": "Endereço IP"
+          "host": "Endereço IP",
+          "use_max_fragment_length": "Usar max_fragment_length"
         },
         "data_description": {
-          "host": "Endereço IP local do seu aparelho Samsung (por exemplo, 192.168.1.50)."
+          "host": "Endereço IP local do seu aparelho Samsung (por exemplo, 192.168.1.50).",
+          "use_max_fragment_length": "Para aparelhos que perdem o Wi-Fi quando o LocalThings se conecta. Limita cada registro DTLS a 1024 bytes; o aparelho passa a ser lido um recurso por vez."
         }
       },
       "confirm_unknown_type": {

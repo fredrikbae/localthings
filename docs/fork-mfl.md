@@ -63,10 +63,22 @@ Upstream files get small entry points only:
 | `transport.py` | transport choice |
 | `config_flow.py` | see below |
 
-In `config_flow.py`, a `HandshakeTimeout` is retried once with the engine after
-`mfl.flow.RETRY_DELAY_S`, which gives the board time to rejoin Wi-Fi. A
-successful retry stores `dtls_engine: mfl1024` on the entry, and reconfigure
-keeps it. Entries without the key behave exactly as upstream.
+In `config_flow.py`, the engine is chosen in three ways:
+
+- **Known boards.** A board in `mfl.flow.KNOWN_VENDOR_IDS`, matched on the
+  plaintext `/oic/p` `vid` that `probing.look` already reads, goes straight to
+  the engine. A plain handshake with `DA-AC-THERAC-01011` sometimes completes,
+  and an entry created that way failed in service.
+- **The form.** The setup and reconfigure forms have a "Use
+  max_fragment_length" checkbox for unlisted boards. Reconfigure pre-ticks it
+  for entries already on the engine.
+- **Fallback.** Otherwise a `HandshakeTimeout` is retried once with the engine
+  after `mfl.flow.RETRY_DELAY_S`, which gives the board time to rejoin Wi-Fi.
+
+Any of these stores `dtls_engine: mfl1024` on the entry. Entries without the key
+behave exactly as upstream. The checkbox's label sits in all eleven
+`translations/*.json`, under `config.step.{user,user_reuse,reconfigure}`. Those
+lines are the likeliest rebase conflicts.
 
 Tests are in `tests/mfl/` and `tests/localthings/test_mfl_flow.py`:
 

@@ -2225,20 +2225,24 @@
         "title": "Aggiungi un elettrodomestico Samsung",
         "description": "Inserisci l'indirizzo IP del tuo dispositivo Samsung. LocalThings lo configura automaticamente con un certificato autofirmato: la maggior parte dei dispositivi non richiede altro.",
         "data": {
-          "host": "Indirizzo IP"
+          "host": "Indirizzo IP",
+          "use_max_fragment_length": "Usa max_fragment_length"
         },
         "data_description": {
-          "host": "Indirizzo IP locale del tuo dispositivo Samsung (ad esempio 192.168.1.50)."
+          "host": "Indirizzo IP locale del tuo dispositivo Samsung (ad esempio 192.168.1.50).",
+          "use_max_fragment_length": "Per gli elettrodomestici che perdono il Wi-Fi quando LocalThings si connette. Limita ogni record DTLS a 1024 byte; l'elettrodomestico viene poi letto una risorsa alla volta."
         }
       },
       "user_reuse": {
         "title": "Aggiungi un elettrodomestico Samsung",
         "description": "Inserisci l'indirizzo IP del tuo dispositivo Samsung. Le credenziali CA di un dispositivo LocalThings esistente verranno riutilizzate.",
         "data": {
-          "host": "Indirizzo IP"
+          "host": "Indirizzo IP",
+          "use_max_fragment_length": "Usa max_fragment_length"
         },
         "data_description": {
-          "host": "Indirizzo IP locale del tuo dispositivo Samsung (ad esempio 192.168.1.50)."
+          "host": "Indirizzo IP locale del tuo dispositivo Samsung (ad esempio 192.168.1.50).",
+          "use_max_fragment_length": "Per gli elettrodomestici che perdono il Wi-Fi quando LocalThings si connette. Limita ogni record DTLS a 1024 byte; l'elettrodomestico viene poi letto una risorsa alla volta."
         }
       },
       "credential": {
@@ -2306,10 +2310,12 @@
         "title": "Modifica l'indirizzo dell'elettrodomestico",
         "description": "Inserisci l'indirizzo IP attuale dell'elettrodomestico. Tutto il resto resta invariato: entità, cronologia e automazioni vengono mantenute.",
         "data": {
-          "host": "Indirizzo IP"
+          "host": "Indirizzo IP",
+          "use_max_fragment_length": "Usa max_fragment_length"
         },
         "data_description": {
-          "host": "Indirizzo IP locale del tuo dispositivo Samsung (ad esempio 192.168.1.50)."
+          "host": "Indirizzo IP locale del tuo dispositivo Samsung (ad esempio 192.168.1.50).",
+          "use_max_fragment_length": "Per gli elettrodomestici che perdono il Wi-Fi quando LocalThings si connette. Limita ogni record DTLS a 1024 byte; l'elettrodomestico viene poi letto una risorsa alla volta."
         }
       },
       "confirm_unknown_type": {

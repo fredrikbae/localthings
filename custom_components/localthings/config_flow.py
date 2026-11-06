@@ -999,6 +999,9 @@ def _probe_and_validate(
     scan = probing.look(host)
     if scan.legacy_http and not scan.candidates:
         raise LegacyHttpFamily(f"{host} serves the legacy bridge on TCP 8888")
+    if not prefer_mfl and mfl_flow.known_board(scan):
+        _LOGGER.debug("%s is a board known to need max_fragment_length", host)
+        prefer_mfl = True
 
     # An identity used directly by the 8888 bridge is not a DTLS client leaf.
     if (
@@ -1215,6 +1218,7 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._ca_key_pem,
                     existing_leaf,
                     self._setup_source_port(self._host),
+                    bool(user_input.get(mfl_flow.FORM_FIELD, False)),
                 )
             except LegacyHttpFamily:
                 # The washer authenticates nothing about the certificate (a
@@ -1255,7 +1259,12 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Both the first device and every later one now ask only for the host:
         # the first tries self-signed, later ones reuse the stored leaf. The
         # step_id still distinguishes them so their form text can differ.
-        schema = vol.Schema({vol.Required(CONF_HOST): _TEXT})
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_HOST): _TEXT,
+                vol.Optional(mfl_flow.FORM_FIELD, default=False): bool,
+            }
+        )
         step_id = "user_reuse" if has_creds else "user"
 
         return self.async_show_form(
@@ -1804,7 +1813,12 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         entry.data.get(CONF_CA_KEY_PEM, ""),
                         (leaf_cert, leaf_key) if leaf_cert and leaf_key else None,
                         self._setup_source_port(host),
-                        entry.data.get(CONF_DTLS_ENGINE) == DTLS_ENGINE_MFL1024,
+                        bool(
+                            user_input.get(
+                                mfl_flow.FORM_FIELD,
+                                entry.data.get(CONF_DTLS_ENGINE) == DTLS_ENGINE_MFL1024,
+                            )
+                        ),
                     )
             except (LegacyHttpFamily, AuthRejected):
                 # An 8888 appliance where a DTLS one was, or one that refuses
@@ -1877,8 +1891,17 @@ class LocalThingsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="reconfigure",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema({vol.Required(CONF_HOST): _TEXT}),
-                user_input or {CONF_HOST: entry.data.get(CONF_HOST)},
+                vol.Schema(
+                    {
+                        vol.Required(CONF_HOST): _TEXT,
+                        vol.Optional(mfl_flow.FORM_FIELD): bool,
+                    }
+                ),
+                user_input
+                or {
+                    CONF_HOST: entry.data.get(CONF_HOST),
+                    mfl_flow.FORM_FIELD: entry.data.get(CONF_DTLS_ENGINE) == DTLS_ENGINE_MFL1024,
+                },
             ),
             errors=errors,
             description_placeholders={

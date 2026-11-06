@@ -17,7 +17,7 @@ from custom_components.localthings.const import (
     DTLS_ENGINE_MFL1024,
 )
 from custom_components.localthings.mfl import flow as mfl_flow
-from custom_components.localthings.probing import HostProbe
+from custom_components.localthings.probing import HostProbe, PlaintextIdentity
 
 from .conftest import ENTRY_DATA, MOCK_HOST, _probe_result
 
@@ -82,6 +82,71 @@ def test_an_mfl_entry_goes_straight_to_the_engine(probe_stage):
 
     assert calls == [True]
     assert info["dtls_engine"] == DTLS_ENGINE_MFL1024
+
+
+def _plaintext(vendor_id: str) -> PlaintextIdentity:
+    return PlaintextIdentity(
+        device_id=None,
+        model="TP1X_DA-AC-THERAC-01011_0000",
+        vendor_id=vendor_id,
+        firmware="",
+        name="",
+        device_types=("oic.wk.d", "oic.d.airconditioner"),
+    )
+
+
+def test_a_known_board_goes_straight_to_the_engine(probe_stage, monkeypatch):
+    """A plain handshake with this board sometimes completes, so the engine
+    is picked from its plaintext vid rather than from a timeout."""
+    calls, outcomes = probe_stage
+    scan = HostProbe(MOCK_HOST, [PORT], [PORT], plaintext=_plaintext("DA-AC-THERAC-01011"))
+    monkeypatch.setattr(config_flow.probing, "look", lambda host: scan)
+    outcomes.append({"port": PORT})
+
+    info = config_flow._probe_and_validate(MOCK_HOST)
+
+    assert calls == [True]
+    assert info["dtls_engine"] == DTLS_ENGINE_MFL1024
+
+
+def test_an_unlisted_board_keeps_the_plain_path(probe_stage, monkeypatch):
+    calls, outcomes = probe_stage
+    scan = HostProbe(MOCK_HOST, [PORT], [PORT], plaintext=_plaintext("DA-REF-NORMAL-000001"))
+    monkeypatch.setattr(config_flow.probing, "look", lambda host: scan)
+    outcomes.append({"port": PORT})
+
+    assert config_flow._probe_and_validate(MOCK_HOST)["dtls_engine"] is None
+    assert calls == [False]
+
+
+@pytest.mark.parametrize("ticked", [True, False])
+async def test_the_setup_checkbox_is_passed_to_the_probe(hass: HomeAssistant, ticked) -> None:
+    with patch.object(
+        config_flow, "_probe_and_validate", return_value=_probe_result(recognized=True)
+    ) as probe:
+        result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_HOST: MOCK_HOST, mfl_flow.FORM_FIELD: ticked}
+        )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert probe.call_args.args[5] is ticked
+
+
+async def test_the_reconfigure_checkbox_overrides_the_entry(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(domain=DOMAIN, data=ENTRY_DATA, unique_id=ENTRY_DATA.get("device_key"))
+    entry.add_to_hass(hass)
+    probe = {**_probe_result(recognized=True), "dtls_engine": DTLS_ENGINE_MFL1024}
+    with (
+        patch.object(config_flow, "_probe_and_validate", return_value=probe) as probed_with,
+        patch("custom_components.localthings.async_setup_entry", return_value=True),
+    ):
+        result = await entry.start_reconfigure_flow(hass)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_HOST: MOCK_HOST, mfl_flow.FORM_FIELD: True}
+        )
+    assert result["reason"] == "reconfigure_successful"
+    assert probed_with.call_args.args[5] is True
+    assert entry.data[CONF_DTLS_ENGINE] == DTLS_ENGINE_MFL1024
 
 
 def test_mfl_retry_failing_reports_its_own_error(probe_stage):

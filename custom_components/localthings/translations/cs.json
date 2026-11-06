@@ -2225,20 +2225,24 @@
         "title": "Přidat spotřebič Samsung",
         "description": "Zadejte IP adresu vašeho spotřebiče Samsung. LocalThings jej nastaví automaticky pomocí vlastnoručně podepsaného certifikátu – většina spotřebičů nepotřebuje nic dalšího.",
         "data": {
-          "host": "IP adresa"
+          "host": "IP adresa",
+          "use_max_fragment_length": "Použít max_fragment_length"
         },
         "data_description": {
-          "host": "Lokální IP adresa vašeho spotřebiče Samsung (např. 192.168.1.50)."
+          "host": "Lokální IP adresa vašeho spotřebiče Samsung (např. 192.168.1.50).",
+          "use_max_fragment_length": "Pro spotřebiče, které se při připojení LocalThings odpojí od Wi-Fi. Omezí každý záznam DTLS na 1024 bajtů; spotřebič se pak čte po jednotlivých prostředcích."
         }
       },
       "user_reuse": {
         "title": "Přidat spotřebič Samsung",
         "description": "Zadejte IP adresu vašeho spotřebiče Samsung. Přihlašovací údaje CA z existujícího spotřebiče LocalThings budou znovu použity.",
         "data": {
-          "host": "IP adresa"
+          "host": "IP adresa",
+          "use_max_fragment_length": "Použít max_fragment_length"
         },
         "data_description": {
-          "host": "Lokální IP adresa vašeho spotřebiče Samsung (např. 192.168.1.50)."
+          "host": "Lokální IP adresa vašeho spotřebiče Samsung (např. 192.168.1.50).",
+          "use_max_fragment_length": "Pro spotřebiče, které se při připojení LocalThings odpojí od Wi-Fi. Omezí každý záznam DTLS na 1024 bajtů; spotřebič se pak čte po jednotlivých prostředcích."
         }
       },
       "credential": {
@@ -2306,10 +2310,12 @@
         "title": "Změnit adresu spotřebiče",
         "description": "Zadejte aktuální IP adresu spotřebiče. Vše ostatní u tohoto zařízení zůstane beze změny — jeho entity, historie i automatizace budou zachovány.",
         "data": {
-          "host": "IP adresa"
+          "host": "IP adresa",
+          "use_max_fragment_length": "Použít max_fragment_length"
         },
         "data_description": {
-          "host": "Lokální IP adresa vašeho spotřebiče Samsung (např. 192.168.1.50)."
+          "host": "Lokální IP adresa vašeho spotřebiče Samsung (např. 192.168.1.50).",
+          "use_max_fragment_length": "Pro spotřebiče, které se při připojení LocalThings odpojí od Wi-Fi. Omezí každý záznam DTLS na 1024 bajtů; spotřebič se pak čte po jednotlivých prostředcích."
         }
       },
       "confirm_unknown_type": {

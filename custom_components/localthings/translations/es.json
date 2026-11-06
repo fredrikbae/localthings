@@ -5,20 +5,24 @@
         "title": "Añadir electrodoméstico Samsung",
         "description": "Introduce la dirección IP de tu electrodoméstico Samsung. LocalThings lo configura automáticamente con un certificado autofirmado; la mayoría de los electrodomésticos no necesitan nada más.",
         "data": {
-          "host": "Dirección IP"
+          "host": "Dirección IP",
+          "use_max_fragment_length": "Usar max_fragment_length"
         },
         "data_description": {
-          "host": "Dirección IP local de tu electrodoméstico Samsung (p. ej. 192.168.1.50)."
+          "host": "Dirección IP local de tu electrodoméstico Samsung (p. ej. 192.168.1.50).",
+          "use_max_fragment_length": "Para aparatos que se desconectan del Wi-Fi cuando LocalThings se conecta. Limita cada registro DTLS a 1024 bytes; el aparato se lee entonces recurso por recurso."
         }
       },
       "user_reuse": {
         "title": "Añadir electrodoméstico Samsung",
         "description": "Introduce la dirección IP de tu electrodoméstico Samsung. Se reutilizarán las credenciales CA de un electrodoméstico LocalThings existente.",
         "data": {
-          "host": "Dirección IP"
+          "host": "Dirección IP",
+          "use_max_fragment_length": "Usar max_fragment_length"
         },
         "data_description": {
-          "host": "Dirección IP local de tu electrodoméstico Samsung (p. ej. 192.168.1.50)."
+          "host": "Dirección IP local de tu electrodoméstico Samsung (p. ej. 192.168.1.50).",
+          "use_max_fragment_length": "Para aparatos que se desconectan del Wi-Fi cuando LocalThings se conecta. Limita cada registro DTLS a 1024 bytes; el aparato se lee entonces recurso por recurso."
         }
       },
       "credential": {
@@ -86,10 +90,12 @@
         "title": "Cambiar la dirección del electrodoméstico",
         "description": "Introduce la dirección IP actual del electrodoméstico. Todo lo demás se mantiene igual: sus entidades, su historial y sus automatizaciones se conservan.",
         "data": {
-          "host": "Dirección IP"
+          "host": "Dirección IP",
+          "use_max_fragment_length": "Usar max_fragment_length"
         },
         "data_description": {
-          "host": "Dirección IP local de tu electrodoméstico Samsung (p. ej. 192.168.1.50)."
+          "host": "Dirección IP local de tu electrodoméstico Samsung (p. ej. 192.168.1.50).",
+          "use_max_fragment_length": "Para aparatos que se desconectan del Wi-Fi cuando LocalThings se conecta. Limita cada registro DTLS a 1024 bytes; el aparato se lee entonces recurso por recurso."
         }
       },
       "confirm_unknown_type": {
