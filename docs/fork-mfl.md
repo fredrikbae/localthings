@@ -10,8 +10,8 @@ for boards that drop off Wi-Fi when the handshake starts.
 Claude (Anthropic's AI assistant, in Claude Code) wrote the code, the tests
 and this document, and ran the measurements against the appliances. The fork's
 owner (fredrikbae) owns the hardware, decided the scope and the design choices,
-reviewed the work and is accountable for it. Commits carry only the owner's
-identity, as `CONTRIBUTING.md` requires.
+and reviewed the work. Commits carry only the owner's identity, as
+`CONTRIBUTING.md` requires.
 
 ## Why
 
